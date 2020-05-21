@@ -1,0 +1,19 @@
+pre, code {
+    background-color: #eeeeee;
+    font-size: 10pt;
+}
+
+blockquote {
+    background-color: #eeeeee;
+    font-style: italic;
+    padding: 2%;
+}
+
+pre {
+    padding: 1%;
+}
+
+img {
+    display: block;
+    margin: 0 auto;
+} 
