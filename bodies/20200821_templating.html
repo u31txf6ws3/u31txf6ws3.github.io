@@ -31,7 +31,7 @@
 
 <p>
   The renderer just replaces each block with whatever comes out of the
-  stdinput, and I it's comically small.
+  stdout, and I it's comically small.
 </p>
 
 <pre>#!/usr/env/bin python3
@@ -40,8 +40,8 @@ import sys
 from subprocess import check_output
 
 template = open(sys.argv[1]).read()
-for block in re.findall(r"{‎{.*}}", template):
-    rendered = check_output(block[2:-2], shell=True)
+for block in re.findall(r"{‎{.*}}", template, re.S):
+    rendered = check_output(block[2:-2], shell=True).decode("utf-8")
     template = template.replace(block, rendered, 1)
 print(template)</pre>
 
@@ -67,3 +67,13 @@ print(template)</pre>
     {‎{ GREETING="Hi" ./render greeting.html }}
   &lt;/body&gt;
 &lt;/html&gt;</pre>
+
+<p>
+  I feel there's a more important lesson here.
+</p>
+
+<p>
+  PS: If you're curious how am I scaping all the brackets shown in the examples
+  here, I'm not. I'm just adding a zero width space between the first and
+  second bracket so the regex won't catch it.
+</p>
