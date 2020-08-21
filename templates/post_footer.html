@@ -1,0 +1,4 @@
+<p style="text-align: center; font-size: 30pt">❦</p>
+{{ [ -z "$REDDIT_COMMENTS" ] || printf "<p><a href=\"%s\">Comments on Reddit</a></p>\n" $REDDIT_COMMENTS }}
+{{ [ -z "$HN_COMMENTS" ] || printf "<p><a href=\"%s\">Comments on Hacker News</a></p>\n" $HN_COMMENTS }}
+<p, style="padding-bottom: 20%">&nbsp;</p>

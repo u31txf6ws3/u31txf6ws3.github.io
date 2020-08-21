@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>&nbsp;</title>
+        {{ ./render templates/header_includes.html }}
+    </head>
+
+    <body>
+        <h2>Posts</h2>
+        {{
+            for i in $(seq $N); do
+                date=$(echo "$DATES" | cut -d'|' -f"$i")
+                title=$(echo "$TITLES" | cut -d'|' -f"$i")
+                output=$(echo "$OUTPUTS" | cut -d'|' -f"$i")
+                printf "<p style=\"color: grey\">%s / <a href=\"%s\">%s</a></p>\n"  "$date" "$output" "$title"
+            done
+        }}
+    </body>
+</html>

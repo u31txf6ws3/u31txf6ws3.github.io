@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Templating post
+</title>
+        <meta charset="UTF-8"/>
+<link rel="stylesheet" type="text/css" href="/latex.css"/>
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
+    </head>
+    <body>
+        <a href="/index.html">Home</a>
+<h1>Templating post
+</h1>
+<p style="text-align: center">August 21st 2020
+</p>
+
+
+        <p>
+  When I created this blog I wanted it to be the dirty simplest website I could
+  make, this way I could focus on writing and keeping it updated (how's that
+  coming along huh?). This is why It's so bare looking, and contains almost no
+  javascript (except for mathjax).
+</p>
+<p>
+  I took literally one post for me to realise how impractical my setup was.
+  If I wanted to change anything about the layout I had to go back and edit
+  every post and the index. Even with the paltry number of posts I had that was
+  boring, and my sed skills will only go so far. For me it was clear I needed to
+  have a templating engine.
+</p>
+<p>
+  I still wanted to keep my intention of having the least amount of
+  dependencies for this blog as possible. I spend a whole day thiking of
+  alternatives, and in the end my solution was so shameless I almost proud of
+  it.
+</p>
+<p>
+  The templates are just html with bash embedded between double brackets. It
+  looks like this.
+</p>
+
+<pre>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;body&gt;
+    &lt;p&gt;{‎{ echo $TEXT }}&lt;/p&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</pre>
+
+<p>
+  The renderer just replaces each block with whatever comes out of the
+  stdinput, and I it's comically small.
+</p>
+
+<pre>#!/usr/env/bin python3
+import re
+import sys
+from subprocess import check_output
+
+template = open(sys.argv[1]).read()
+for block in re.findall(r"{‎{.*}}", template):
+    rendered = check_output(block[2:-2], shell=True)
+    template = template.replace(block, rendered, 1)
+print(template)</pre>
+
+<p>
+  That's really all there is to it. If you're curious how you pass data into
+  the templates, the answer is environment variables. Yes I'm serious. This is
+  how you invoke it.
+</p>
+
+<pre>TEXT="Hello, World!" ./render template.html</pre>
+
+<p>
+  Macros even come for free, you just invoke the renderer from a template.
+</p>
+
+<pre># greeting.html
+&lt;p&gt;{‎{ printf "%s, World!" "$GREETING" }}&lt;/p&gt;</pre>
+
+<pre>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;body&gt;
+    {‎{ GREETING="Hello" ./render greeting.html }}
+    {‎{ GREETING="Hi" ./render greeting.html }}
+  &lt;/body&gt;
+&lt;/html&gt;</pre>
+
+
+        <p style="text-align: center; font-size: 30pt">❦</p>
+
+
+<p, style="padding-bottom: 20%">&nbsp;</p>
+
+
+    </body>
+</html>
+

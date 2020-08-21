@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+from subprocess import check_output
+import json
+
+
+def render(template, argdict):
+    args = " ".join(f"{k}=\"{v}\"" for k, v in argdict.items())
+    return check_output(f"{args} ./render {template}", shell=True).decode("UTF-8")
+
+
+if __name__ == "__main__":
+    with open("posts.json") as posts_file:
+        posts = list(reversed(sorted(json.load(posts_file), key=lambda p: p['DATE'])))
+
+    for post in posts:
+        print(f"Rendering Post: {post['TITLE']}")
+        with open(post['OUTPUT'], 'w') as fout:
+            fout.write(render("templates/post.html", post))
+
+
+    print("Rendenring index")
+    visible_posts = [p for p in posts if not p.get("HIDE")]
+    index_data = {
+        "DATES": '|'.join(p["DATE"] for p in visible_posts),
+        "OUTPUTS": '|'.join(p["OUTPUT"] for p in visible_posts),
+        "TITLES": '|'.join(p["TITLE"] for p in visible_posts),
+        "N": len(visible_posts)
+    }
+    with open("index.html", 'w') as fout:
+        fout.write(render("templates/index.html", index_data))

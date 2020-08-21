@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>{{ echo $TITLE }}</title>
+        {{ ./render templates/header_includes.html }}
+    </head>
+    <body>
+        {{ TITLE=$TITLE DATE=$DATE ./render templates/post_header.html }}
+        {{ ./render $BODYPATH }}
+        {{ REDDIT_COMMENTS=$REDDIT_COMMENTS ./render templates/post_footer.html }}
+    </body>
+</html>
