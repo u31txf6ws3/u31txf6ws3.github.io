@@ -1,4 +1,8 @@
 <p style="text-align: center; font-size: 30pt">❦</p>
-{{ [ -z "$REDDIT_COMMENTS" ] || printf "<p><a href=\"%s\">Comments on Reddit</a></p>\n" $REDDIT_COMMENTS }}
-{{ [ -z "$HN_COMMENTS" ] || printf "<p><a href=\"%s\">Comments on Hacker News</a></p>\n" $HN_COMMENTS }}
+{{ 
+    if "REDDIT_COMMENTS" in post:
+        print('<p><a href="{REDDIT_COMMENTS}">Comments on Reddit</a></p>'.format_map(post))
+    if "HN_COMMENTS" in post:
+        print('<p><a href="{HN_COMMENTS}">Comments on Hacker News</a></p>'.format_map(posts))
+}}
 <p, style="padding-bottom: 20%">&nbsp;</p>

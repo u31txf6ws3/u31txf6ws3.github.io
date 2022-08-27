@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
-from subprocess import check_output
+from datetime import datetime
+from render import render_template as render
 import json
 
 
-def render(template, argdict):
-    args = " ".join(f"{k}=\"{v}\"" for k, v in argdict.items())
-    return check_output(f"{args} ./render {template}", shell=True).decode("UTF-8")
+def format_date(date_str):
+    date = datetime.strptime(date_str, "%Y-%m-%d")
+    suffixes = {1:'st',2:'nd',3:'rd'}
+    suffix = 'th' if 11 <= date.day <= 13 else suffixes.get(date.day % 10, 'th')
+    return date.strftime("%B {}{}, %Y").format(date.day, suffix)
 
 
 if __name__ == "__main__":
     with open("posts.json") as posts_file:
-        posts = list(reversed(sorted(json.load(posts_file), key=lambda p: p['DATE'])))
+        posts = json.load(posts_file)
 
     for post in posts:
         print(f"Rendering Post: {post['TITLE']}")
         with open(post['OUTPUT'], 'w') as fout:
-            fout.write(render("templates/post.html", post))
+            post['PRETTY_DATE'] = format_date(post['DATE'])
+            fout.write(render("templates/post.html", {"post": post}))
 
-
-    print("Rendenring index")
-    visible_posts = [p for p in posts if not p.get("HIDE")]
-    index_data = {
-        "DATES": '|'.join(p["DATE"] for p in visible_posts),
-        "OUTPUTS": '|'.join(p["OUTPUT"] for p in visible_posts),
-        "TITLES": '|'.join(p["TITLE"] for p in visible_posts),
-        "N": len(visible_posts)
-    }
+    print("Rendering index")
+    visible_posts = sorted(
+        [p for p in posts if not p.get("HIDE")],
+        key=lambda p: p['DATE'],
+        reverse=True
+    )
     with open("index.html", 'w') as fout:
-        fout.write(render("templates/index.html", index_data))
+        fout.write(render("templates/index.html", {"posts": visible_posts}))

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>{{ echo $TITLE }}</title>
-        {{ ./render templates/header_includes.html }}
+        <title>{{ print(post["TITLE"]) }}</title>
+        {{ print(render_template("templates/header_includes.html", {"post": post})) }}
     </head>
     <body>
-        {{ TITLE=$TITLE DATE=$DATE ./render templates/post_header.html }}
-        {{ ./render $BODYPATH }}
-        {{ REDDIT_COMMENTS=$REDDIT_COMMENTS ./render templates/post_footer.html }}
+        {{ print(render_template("templates/post_header.html", {"post": post})) }}
+        {{ print(render_template(post["BODYPATH"])) }}
+        {{ print(render_template("templates/post_footer.html", {"post": post})) }}
     </body>
 </html>
