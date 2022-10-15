@@ -6,6 +6,7 @@ from typing import Any, Callable, Iterable, Tuple, Iterator, TypeVar, List, Dict
 from contextlib import redirect_stdout
 import io
 import itertools as itt
+import html
 
 T = TypeVar("T")
 
@@ -71,7 +72,8 @@ class Code:
     def render(self) -> str:
         if not self.code:
             return ""
-        output = self.exec() if self.executable else ""
+        code = html.escape(self.code)
+        output = html.escape(self.exec() if self.executable else "")
         if not output:
             return f"<pre>{self.code}</pre>"
         return f"<pre>{self.code}</pre>\n<pre># stdout\n{output}\n</pre>"
