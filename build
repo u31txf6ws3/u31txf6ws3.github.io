@@ -1,31 +1,75 @@
 #!/usr/bin/env python3
 from datetime import datetime
+from hashlib import md5
 from render import render_template as render
-import json
+from pathlib import Path
+from typing import Optional, Union, Iterator, Tuple, Dict, Iterable
+from itertools import starmap
+import re
+import py2html
+import sys
 
 
-def format_date(date_str):
+def format_date(date_str: str) -> str:
     date = datetime.strptime(date_str, "%Y-%m-%d")
     suffixes = {1:'st',2:'nd',3:'rd'}
     suffix = 'th' if 11 <= date.day <= 13 else suffixes.get(date.day % 10, 'th')
     return date.strftime("%B {}{}, %Y").format(date.day, suffix)
 
 
-if __name__ == "__main__":
-    with open("posts.json") as posts_file:
-        posts = json.load(posts_file)
+def file_hash(path: Union[str, Path]) -> str:
+    path = Path(path)
+    with open(path, "rb") as f:
+        return md5(f.read()).hexdigest()
 
-    for post in posts:
-        print(f"Rendering Post: {post['TITLE']}")
-        with open(post['OUTPUT'], 'w') as fout:
-            post['PRETTY_DATE'] = format_date(post['DATE'])
-            fout.write(render("templates/post.html", {"post": post}))
 
+def output_hash(path: Union[str, Path]) -> Optional[str]:
+    path = Path(path)
+    if not path.is_file():
+        return None
+    with open(path) as f:
+        *_, last = [""] + list(f)
+    m = re.match(r"<!--([0-9a-f]+)-->", last)
+    if not m:
+        return None
+    return m.groups()[0]
+
+
+def collect_posts(post_dir: Optional[Path] = None) -> Iterator[Tuple[str, py2html.Post]]:
+    post_dir = post_dir or Path(__file__).parent / "bodies"
+    for post_path in post_dir.glob("*.py"):
+        with open(post_path) as f:
+             post = py2html.Post.from_file(f)
+        yield file_hash(post_path), post
+
+
+def render_post(hash: str, post: py2html.Post, force: bool = False) -> py2html.Post:
+    if hash == output_hash(post.metadata['OUTPUT']) and not force:
+        print(f"Skipping Post: {post.metadata['TITLE']}")
+        return post
+
+    output = Path(post.metadata['OUTPUT'])
+    print(f"Rendering Post: {post.metadata['TITLE']}")
+    with open(post.metadata['OUTPUT'], 'w') as fout:
+        post.metadata['PRETTY_DATE'] = format_date(post.metadata['DATE'])
+        fout.write(render("templates/post.html", {"post": post.metadata}))
+        fout.write(f"\n<!--{hash}-->")
+
+    return post
+
+
+def render_index(posts: Iterable[py2html.Post], showall=False) -> None:
     print("Rendering index")
     visible_posts = sorted(
-        [p for p in posts if not p.get("HIDE")],
+        [p.metadata for p in posts if not p.metadata.get("HIDDEN") or showall],
         key=lambda p: p['DATE'],
         reverse=True
     )
     with open("index.html", 'w') as fout:
         fout.write(render("templates/index.html", {"posts": visible_posts}))
+
+
+if __name__ == "__main__":
+    force = "-f" in sys.argv
+    all = "-a" in sys.argv
+    render_index((render_post(h, p, force) for h, p in  collect_posts()), all)
