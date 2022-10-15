@@ -111,7 +111,7 @@ time(CARef, 10000)
 # but is that fast or slow? I'm gonna bet it's slow, this being a pure python
 # implementation and all, but to get an idea of how slow it is, I made a simple
 # C implementation for us to have a performance goal. You can check the code <a
-# href="https://github.com/hfcredidio/blogsauce/blob/master/content/cellular-automata-2/cprof.c">here</a>.
+# href="https://gist.github.com/u31txf6ws3/e9ece30e600672b87e46f93032e4c374">here</a>.
 
 # <pre>$ gcc-5 -O3 -std=c99 cprof.c -o cprof &amp;&amp; ./cprof
 # All tests passed.

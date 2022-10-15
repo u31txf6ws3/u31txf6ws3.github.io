@@ -125,7 +125,7 @@ Ok, it takes around 13 seconds for my computer to apply a rule 10,000 times,
 but is that fast or slow? I'm gonna bet it's slow, this being a pure python
 implementation and all, but to get an idea of how slow it is, I made a simple
 C implementation for us to have a performance goal. You can check the code <a
-href="https://github.com/hfcredidio/blogsauce/blob/master/content/cellular-automata-2/cprof.c">here</a>.
+href="https://gist.github.com/u31txf6ws3/e9ece30e600672b87e46f93032e4c374">here</a>.
 </p>
 <p>
 <pre>$ gcc-5 -O3 -std=c99 cprof.c -o cprof &amp;&amp; ./cprof
@@ -206,12 +206,12 @@ def rolling_window_np(arr, wsize):
 
 print(rolling_window_np([1,2,3,4,5,6], 3))</pre>
 <pre># stdout
-array([[6, 1, 2],
-       [1, 2, 3],
-       [2, 3, 4],
-       [3, 4, 5],
-       [4, 5, 6],
-       [5, 6, 1]])
+[[6 1 2]
+ [1 2 3]
+ [2 3 4]
+ [3 4 5]
+ [4 5 6]
+ [5 6 1]]
 </pre>
 <p>
 Ok, this definitely works, but if this implementation looks a bit arcane it's
@@ -411,4 +411,4 @@ what we did:
     </body>
 </html>
 
-<!--3e78b6f43c18e56191a75ccf1091794e-->
+<!--55936b149b150ce0a1b27eb1665f4eab-->
