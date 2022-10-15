@@ -35,5 +35,3 @@ def render_template(path, data=None):
         for block in code_blocks
     )
     return replace_many(template, code_blocks, rendered)
-    hash = md5(open(path, "rb").read()).hexdigest()
-    return f"{final}\n<!--{hash}-->"
