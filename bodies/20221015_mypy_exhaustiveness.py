@@ -2,7 +2,6 @@
 #     "TITLE": "Mypy",
 #     "DATE": "2022-10-15",
 #     "BODYPATH": "bodies/20221015_mypy_exhaustiveness.py",
-#     "REDDIT_COMMENTS": "https://old.reddit.com/user/u31txf6ws3/comments/go0mve/optimizing_cellular_automata_in_python/",
 #     "OUTPUT": "posts/20221015_mypy_exhaustiveness.html",
 #     "HIDDEN": true
 # }
@@ -10,7 +9,7 @@
 import enum
 
 class Fruit(enum.Enum):
-    apple = enum.auto()
+    apple  = enum.auto()
     banana = enum.auto()
 
 def smell(fruit: Fruit) -> str:
@@ -18,80 +17,98 @@ def smell(fruit: Fruit) -> str:
     elif fruit is Fruit.banana: return "good"
     raise ValueError(f"{fruit} is not a fruit")
 
-# This works fine and passes mypy.
+# This works fine and passes mypy. But if I were to change the definition of
+# <code>Fruit</code> to add a new member
 
-class Fruit(enum.Enum):
-    apple = enum.auto()
+class FruitMore(enum.Enum):
+    apple  = enum.auto()
     banana = enum.auto()
     durian = enum.auto()
 
-# But now <code>taste(Fruit.durian)</code> fails
+# the function <code>smell</code> would raise a <code>ValueError</code> if
+# <code>FruitMore.durian</code> were passed to it, even if the type annotatios
+# were patched to take a <code>FruitMore</code> instead of <code>Fruit</code>.
+# That's the expected behaviour, but it's more helpful to trigger such errors
+# during static analysis. Mypy is cabaple of doing such checks, but it's not
+# very obvious how. I won't go into details on how this works, but the trick is
+# to define a fucntion like below
 
 from typing import NoReturn
 
 def assert_never(_: NoReturn) -> NoReturn:
     raise ValueError("Unreachable code reached")
 
-# Then we rewrite our function like
+# which is meant to be caled in unreachable areas of the code.
+# So if I rewrite the <code>smell</code> function like so
 
-def smell(fruit: Fruit) -> str:
-    if   fruit is Fruit.apple:  return "nice"
-    elif fruit is Fruit.banana: return "good"
+def smell_incomplete(fruit: FruitMore) -> str:
+    if   fruit is FruitMore.apple:  return "nice"
+    elif fruit is FruitMore.banana: return "good"
     assert_never(fruit)
 
-# If we add a case handling the new enum member
+# then mypy helpfully points an error at the last line of the function:
+# <code>Argument 1 to "assert_never" has incompatible type
+# "Literal[FruitMore.durian]"; expected "NoReturn"</code>. Adding a case for
+# handling all member of <code>FruitMore</code> makes the error go away.
 
-def smell(fruit: Fruit) -> str:
-    if   fruit is Fruit.apple:  return "nice"
-    elif fruit is Fruit.banana: return "good"
-    elif fruit is Fruit.durian: return "oh lord"
-    assert_never(fruit)
+def smell_complete(fruit: FruitMore) -> str:
+    if   fruit is FruitMore.apple:  return "nice"
+    elif fruit is FruitMore.banana: return "good"
+    elif fruit is FruitMore.durian: return "oh lord"
+    assert_never(fruit)  # no errors here
 
-# But say one has a dictinary
+# This works fine in many situations, but not all of them. At my work, I am
+# currently converting many stringly typed parts the codebase to use enums. It
+# so happens that many constants are stored in dictionaries like so
 
-smells: dict[Fruit, str] = {
-    Fruit.apple:  "nice",
-    Fruit.banana: "good",
+smells: dict[FruitMore, str] = {
+    FruitMore.apple:  "nice",
+    FruitMore.banana: "good",
 }
 
-# Mypy will not catch an error
+# I'd like to staticaly check that the dictionary above is missing a member,
+# but I couldn't find a trick as simple as <code>assert_never</code> to make it
+# happen.
 
-# One way of doing it is with functions
-# something of the sort
+# One work around is to use a class method to generate the dictionary
 
 from typing import TypeVar
 
 T = TypeVar("T")
 
-class Fruit(enum.Enum):
+class FruitMapping(enum.Enum):
     apple = enum.auto()
     banana = enum.auto()
     durian = enum.auto()
 
     @classmethod
-    def map(cls, apple: T, banana: T, durian: T) -> dict[Fruit, T]:
+    def map(cls, apple: T, banana: T, durian: T) -> dict["FruitMapping", T]:
         return {
             cls.apple: apple,
             cls.banana: banana,
             cls.durian: durian,
         }
 
-# and replace the dicts with
+# This way if I rewrite the dictionaries like so
 
 #$
-smells: dict[Fruit, str] = Fruit.map(
+smells_broken: dict[FruitMapping, str] = FruitMapping.map(
     apple  = "nice",
     banana = "good",
 )
 
-# which mypy does identify as an error but now i need to keep track of the enum
-# members in two places, no good
+# mypy will indeed identify that there's a missing argument
+# <code>durian</code>.
 
-# i came to realisation i need to do two things
-# * genrate the map function automatically
-# * write a mypy plugin that type check that dynamic function
+# That works fine, but now I need to make sure that <code>map</code> always has
+# the same arguments as there are members in the enum, making sure they are
+# spelled properly. That's prone to error, as it allows developers to
+# accidentally write code that should be illegal. Besides I'd rather not have
+# to litter all enums with a definition of <code>map</code>.
 
-# the first one sounds easy, you can just subclass enum
+# Of course writing a generic version of <code>map</code> is quite easy
+
+from pprint import pprint as print
 
 class MappingEnum(enum.Enum):
     @classmethod
@@ -99,50 +116,161 @@ class MappingEnum(enum.Enum):
         return {member: kwargs[member.name] for member in cls}
 
 
-class Fruit(MappingEnum):
+class FruitMappingGeneric(MappingEnum):
     apple = enum.auto()
     banana = enum.auto()
     durian = enum.auto()
 
-print(Fruit.map(apple=1, banana=2, durian=3))
+print(FruitMappingGeneric.map(apple=1, banana=2, durian=3))
 
-# unfortunately the mypy plugins a finicky
+# But now mypy is not cabaple of telling that
 
-E = TypeVar("E", bound=enum.Enum)
+#$
+FruitMappingGeneric.map(apple=1, banana=2)
 
-@classmethod
-def enum_map(cls: type[E], **kwargs: T) -> dict[E, T]:
-    return {member: kwargs[member.name] for member in cls}
+# is missing an argument. It's clear to me that I have to both generate
+# <code>map</code> automatically and on top of that write a mypy plugin that
+# patches the annotation <code>map</code> for each enum, so it looks like the
+# one in <code>FruitMapping</code>.
+
+# So it started my first foray into writing mypy plugins. Unfortunaly the API
+# for that is very imature and thinly documented. The best way to get the gist
+# of it is to look at examples and the read the source code.
+
+# There are two plugin hooks that give me acces to the class definition, so I can patch it:
+
+# I decided to go with a metaclass because it's a bit more straightforward. All I have to do
+# is move the definition of <code>map</code> to a metaclas
+
+from typing import cast, Iterable
+E = TypeVar("E")
 
 class MappingEnumMeta(enum.EnumMeta):
-    def __new__(
-        cls: type[E],
-        name: str,
-        bases: tuple[type, ...],
-        dct: enum._EnumDict,
-    ) -> E:
-        dict.__setitem__(dct, "map", enum_map)
-        return super().__new__(cls, name, bases, dct)
+    def map(cls: type[E], **kwargs: T) -> dict[E, T]:
+        # mypy can't tell that type[E] is iterable
+        # so I'm just gonna ignore the types here
+        return {member: kwargs[member.name] for member in cls}  # type: ignore
 
-class Fruit(enum.Enum, metaclass=MappingEnumMeta):
+class FruitWithMetaMapping(enum.Enum, metaclass=MappingEnumMeta):
     apple  = enum.auto()
     banana = enum.auto()
     durian = enum.auto()
 
-print(Fruit.map(apple=1, banana=2, durian=3))
+print(FruitWithMetaMapping.map(apple=1, banana=2, durian=3))
 
-# Ever seen a <code>classmethod</code> defined outiside a class?
-# Dont freakout, rember that
+# That works the same, which is good. And just like before
 
-class A:
-    @classmethod
-    def f(cls): ...
+#$
+FruitWithMetaMapping.map(apple=1, banana=2)
 
-# is just short for
+# raises an exception. Creating an enum is a bit clunkier, having to both
+# subclass <code>enum.Enum</code> and setting the metaclass to
+# <code>MappingEnumMeta</code>, but I think that's an acceptable burden.
+
+# Now to the fun part, writing the mypy plugin. I quote straight from
+# <code>mypy.plugin</code>'s docstring <blockquote> At several steps during
+# semantic analysis and type checking mypy calls special `get_xxx` methods on
+# user plugins with a single string argument that is a fully qualified name
+# (full name) of a relevant definition </blockquote> you can check the full
+# list of special methods in the documentation, but the one that I need is
+# <code>get_metaclass_hook</code>. Here's what the main body of the plugin
+# looks like
+
+from typing import Callable, Optional, Type
+from mypy.plugin import ClassDefContext, Plugin
+
+class EnumMapPlugin(Plugin):
+    def get_metaclass_hook(
+            self,
+            fullname: str,
+    ) -> Optional[Callable[[ClassDefContext], None]]:
+        # a better way of checking would be to do
+        # a direct comparision
+        # fullname == "whatever_module.ClassName"
+        # but the below is better for rendering this blog post
+        if fullname.endswith(".MappingEnumMeta"):
+            return add_enum_map_signature
+        return None
+
+def plugin(version: str) -> Type[Plugin]:
+    return EnumMapPlugin
+
+# When the plugin encounters a definition it doesn't cares about, the hook
+# returns <code>None</code>, telling mypy to keep chugging as normal. When it
+# does meet a class that has <code>MappingEnumMeta</code> as metaclass, then it
+# returns a callback whose signature depends on the specific hook. Refer to the
+# souce code for the signature of each hook.
+
+# Now I have to write <code>add_enum_map_signature</code>, which I remind is
+# meant to add the signature of the following function to
+# <code>FruitWithMetaMapping</code>
 
 @classmethod
-def f(cls): ...
+def map(cls: Type[E], *, apple: T, banana: T, durian: T) -> dict[E, T]: ...
 
-A = type("A", (), {"f": f})
+# Here is how I go about doing it. Worth mentioning that this uses the latest
+# unreleased version (0.990+dev.5e1e26eba)
 
-# which is essentially what we're doing there
+from mypy import nodes
+from mypy import types
+from mypy.typevars import fill_typevars
+from mypy.plugins.common import add_method_to_class
+
+def add_enum_map_signature(ctx: ClassDefContext) -> None:
+
+    # Collect the names of the members of the enum in question they are
+    # instances of mypy.nodes.Var any method extra method added to an enum has
+    # type mypy.nodes.FuncDef
+    enum_members = [
+        member
+        for member, symbol_table in ctx.cls.info.names.items()
+        if isinstance(symbol_table.node, nodes.Var)
+    ]
+
+    # This creates the type of the arguments, that is, the type
+    # T = TypeVar("T", bound=object)
+    obj = ctx.api.named_type("builtins.object")
+    t_var = types.TypeVarType("T", "T", -1, [], obj)
+
+    # Create the argument nodes. Setting the kind to nodes.ARG_NAMED
+    # means they are keyword only arguments
+    args = [
+        nodes.Argument(
+            variable=nodes.Var(member, t_var),
+            type_annotation=t_var,
+            initializer=None,
+            kind=nodes.ARG_NAMED,
+        )
+        for member in enum_members
+    ]
+
+    # create the type of the cls argument, Type[E],
+    # where E = TypeVar("E", bound=FruitWithMetaMapping)
+    self_type = types.TypeType(fill_typevars(ctx.cls.info))
+
+    # create the return type, that is, dict[E, T]
+    return_type = ctx.api.named_type("builtins.dict", [self_type, t_var])
+
+    # quite self explanatory
+    add_method_to_class(
+        api=ctx.api,
+        cls=ctx.cls,
+        name="map",
+        args=args,
+        self_type=self_type,
+        return_type=return_type,
+        is_classmethod=True,
+        tvar_def=t_var,
+    )
+
+# You can add a plugin to mypy by adding the following line to your config
+# file of preference
+# <pre>[mypy]
+# plugins = mapping_enum.py</pre>
+
+# And with that you should see helpful 
+
+#$
+FruitWithMetaMapping.map(apple=1, banana=2)
+
+# This gives an error <code>Missing named argument "durian" for "map" of "FruitWithMetaMapping"</code>
