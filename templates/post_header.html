@@ -1,3 +1,6 @@
 <a href="/index.html">Home</a>
 <h1>{{ print(post['TITLE']) }}</h1>
+{{
+if "SUBTITLE" in post: print('<h1 style="font-size:150%;text-align:center;">', post['SUBTITLE'], "</h1>")
+}}
 <p style="text-align: center">{{ print(post['PRETTY_DATE']) }}</p>
