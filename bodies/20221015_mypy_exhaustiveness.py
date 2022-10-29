@@ -1,10 +1,17 @@
 # {
-#     "TITLE": "Mypy",
+#     "TITLE": "More Exhaustiveness Checks With mypy",
+#     "SUBTITLE": "or How to Write a Basic mypy Plugin",
 #     "DATE": "2022-10-15",
 #     "BODYPATH": "bodies/20221015_mypy_exhaustiveness.py",
 #     "OUTPUT": "posts/20221015_mypy_exhaustiveness.html",
 #     "HIDDEN": true
 # }
+
+# Modern type checkers are capable of analysing whether all members of an
+# enumeration type are being handled in a if-else or match statement, which is
+# referred as exhaustiveness check. In a dynamic language like python this is
+# a nicety that makes adding or removing member to an enum a safer process. Take
+# the following for example
 
 import enum
 
@@ -17,8 +24,8 @@ def smell(fruit: Fruit) -> str:
     elif fruit is Fruit.banana: return "good"
     raise ValueError(f"{fruit} is not a fruit")
 
-# This works fine and passes mypy. But if I were to change the definition of
-# <code>Fruit</code> to add a new member
+# This works as expected and passes all mypy checks, but if I were to change
+# the definition of <code>Fruit</code> to add a new member
 
 class FruitMore(enum.Enum):
     apple  = enum.auto()
@@ -28,18 +35,21 @@ class FruitMore(enum.Enum):
 # the function <code>smell</code> would raise a <code>ValueError</code> if
 # <code>FruitMore.durian</code> were passed to it, even if the type annotatios
 # were patched to take a <code>FruitMore</code> instead of <code>Fruit</code>.
-# That's the expected behaviour, but it's more helpful to trigger such errors
-# during static analysis. Mypy is cabaple of doing such checks, but it's not
-# very obvious how. I won't go into details on how this works, but the trick is
-# to define a fucntion like below
+# That's the expected behaviour, but in a large codebase it's easy to lose
+# track of all the places where I'd need to handle the new member. It is more
+# helpful to have such errors flagged during static analysis. Mypy is cabaple
+# of doing such checks, but it's not very obvious how. The trick (better
+# described <a
+# href="http://web.archive.org/web/20221004031954/https://hakibenita.com/python-mypy-exhaustive-checking">here</a>)
+# is to define a test fucntion with the following signature
 
 from typing import NoReturn
 
 def assert_never(_: NoReturn) -> NoReturn:
     raise ValueError("Unreachable code reached")
 
-# which is meant to be caled in unreachable areas of the code.
-# So if I rewrite the <code>smell</code> function like so
+# which is meant to be called in unreachable areas of the code. So if I rewrite
+# the <code>smell</code> function like so
 
 def smell_incomplete(fruit: FruitMore) -> str:
     if   fruit is FruitMore.apple:  return "nice"
@@ -48,8 +58,8 @@ def smell_incomplete(fruit: FruitMore) -> str:
 
 # then mypy helpfully points an error at the last line of the function:
 # <code>Argument 1 to "assert_never" has incompatible type
-# "Literal[FruitMore.durian]"; expected "NoReturn"</code>. Adding a case for
-# handling all member of <code>FruitMore</code> makes the error go away.
+# "Literal[FruitMore.durian]"; expected "NoReturn"</code>. Adding a case to
+# account for all members of <code>FruitMore</code> makes the error go away.
 
 def smell_complete(fruit: FruitMore) -> str:
     if   fruit is FruitMore.apple:  return "nice"
@@ -57,18 +67,18 @@ def smell_complete(fruit: FruitMore) -> str:
     elif fruit is FruitMore.durian: return "oh lord"
     assert_never(fruit)  # no errors here
 
-# This works fine in many situations, but not all of them. At my work, I am
-# currently converting many stringly typed parts the codebase to use enums. It
-# so happens that many constants are stored in dictionaries like so
+# This works fine in many situations, but not all of them. At the moment I am
+# currently converting a heavily stringly typed codebase to use enums. It so
+# happens there are many constant dictionaries that map enums to values like so
 
 smells: dict[FruitMore, str] = {
     FruitMore.apple:  "nice",
     FruitMore.banana: "good",
 }
 
-# I'd like to staticaly check that the dictionary above is missing a member,
-# but I couldn't find a trick as simple as <code>assert_never</code> to make it
-# happen.
+# I would like to staticaly check that the dictionary above is missing a
+# member, but I couldn't find a trick as simple as <code>assert_never</code> to
+# make it happen.
 
 # One work around is to use a class method to generate the dictionary
 
@@ -82,7 +92,7 @@ class FruitMapping(enum.Enum):
     durian = enum.auto()
 
     @classmethod
-    def map(cls, apple: T, banana: T, durian: T) -> dict["FruitMapping", T]:
+    def map(cls, *, apple: T, banana: T, durian: T) -> dict["FruitMapping", T]:
         return {
             cls.apple: apple,
             cls.banana: banana,
@@ -97,14 +107,15 @@ smells_broken: dict[FruitMapping, str] = FruitMapping.map(
     banana = "good",
 )
 
-# mypy will indeed identify that there's a missing argument
-# <code>durian</code>.
+# mypy will identify that there's a missing argument <code>durian</code> with a
+# <code>Missing named argument "durian"</code> error.
 
-# That works fine, but now I need to make sure that <code>map</code> always has
-# the same arguments as there are members in the enum, making sure they are
-# spelled properly. That's prone to error, as it allows developers to
-# accidentally write code that should be illegal. Besides I'd rather not have
-# to litter all enums with a definition of <code>map</code>.
+# The problem with the solution above is that it imposes the burdern of
+# maintaining the enum members in two different places (the body of the enum,
+# and in the definition of <code>map</code>). And because there are no static
+# checks to guarantee that they match, it allows developers to accidentally
+# write code that should be illegal. Finally I'd rather not have to litter all
+# enums with a definition of <code>map</code>.
 
 # Of course writing a generic version of <code>map</code> is quite easy
 
@@ -123,15 +134,21 @@ class FruitMappingGeneric(MappingEnum):
 
 print(FruitMappingGeneric.map(apple=1, banana=2, durian=3))
 
-# But now mypy is not cabaple of telling that
+# But as you may expect, mypy is not cabaple of telling that
 
 #$
 FruitMappingGeneric.map(apple=1, banana=2)
 
-# is missing an argument. It's clear to me that I have to both generate
+# is missing an argument.
+
+# After a little research, it seems to me that I have to both generate
 # <code>map</code> automatically and on top of that write a mypy plugin that
-# patches the annotation <code>map</code> for each enum, so it looks like the
-# one in <code>FruitMapping</code>.
+# patches its type annotation for each subclass of <code>MappingEnum</code>, so
+# it ends looking like the one in <code>FruitMapping</code>.
+
+# So I went on to learn how to write a mypy plugin. Unfortunaly that is not
+# what I would call accessible. The plugin system is very imature and poorly
+# documented. So I think
 
 # So it started my first foray into writing mypy plugins. Unfortunaly the API
 # for that is very imature and thinly documented. The best way to get the gist
