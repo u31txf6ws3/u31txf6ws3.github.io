@@ -35,7 +35,7 @@ class Comment:
             "".join(s.replace("# ", "", 1) for s in lines).strip()
         )
 
-    def render(self) -> str:
+    def render(self, _: Any) -> str:
         if not self.text:
             return ""
         return f"<p>\n{self.text}\n</p>"
@@ -63,17 +63,17 @@ class Code:
         stdout = io.StringIO()
         with redirect_stdout(stdout):
             try:
-                exec(self.code, globals_ or globals())
+                exec(self.code, globals_)
             except:
                 print(self.code, file=sys.stderr)
                 raise
         return stdout.getvalue().strip()
 
-    def render(self) -> str:
+    def render(self, globals_: Optional[Dict[str, Any]] = None) -> str:
         if not self.code:
             return ""
         code = html.escape(self.code)
-        output = html.escape(self.exec() if self.executable else "")
+        output = html.escape(self.exec(globals_) if self.executable else "")
         if not output:
             return f"<pre>{self.code}</pre>"
         return f"<pre>{self.code}</pre>\n<pre># stdout\n{output}\n</pre>"
@@ -110,7 +110,8 @@ class Post:
         return cls(metadata, sections)
 
     def render(self) -> str:
-        return "\n".join(s.render() for s in self.sections)
+        globals_: Dict[str, Any] = {}
+        return "\n".join(s.render(globals_) for s in self.sections)
 
 
 if __name__ == "__main__":
