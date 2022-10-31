@@ -53,8 +53,13 @@ were patched to take a <code>FruitMore</code> instead of <code>Fruit</code>.
 That's the expected behaviour, but in a large codebase it's easy to lose
 track of all the places where I'd need to handle the new member. It is more
 helpful to have such errors flagged during static analysis. Mypy is cabaple
-of doing such checks, but it's not very obvious how. The trick (better
-described <a
+of doing such checks, but it's not very obvious how.
+</p>
+<p>
+<h2>Basic enum exhaustiveness with mypy</h2>
+</p>
+<p>
+The trick (better described <a
 href="http://web.archive.org/web/20221004031954/https://hakibenita.com/python-mypy-exhaustive-checking">here</a>)
 is to define a test fucntion with the following signature
 </p>
@@ -117,10 +122,12 @@ class FruitMapping(enum.Enum):
 <p>
 This way if I rewrite the dictionaries like so
 </p>
+<p>
 <pre>smells_broken: dict[FruitMapping, str] = FruitMapping.map(
     apple  = "nice",
     banana = "good",
 )</pre>
+</p>
 <p>
 mypy will identify that there's a missing argument <code>durian</code> with a
 <code>Missing named argument "durian"</code> error.
@@ -151,14 +158,16 @@ class FruitMappingGeneric(MappingEnum):
 
 print(FruitMappingGeneric.map(apple=1, banana=2, durian=3))</pre>
 <pre># stdout
-{&lt;FruitMappingGeneric.apple: 1&gt;: 1,
+{&lt;FruitMappingGeneric.durian: 3&gt;: 3,
  &lt;FruitMappingGeneric.banana: 2&gt;: 2,
- &lt;FruitMappingGeneric.durian: 3&gt;: 3}
+ &lt;FruitMappingGeneric.apple: 1&gt;: 1}
 </pre>
 <p>
 But as you may expect, mypy is not cabaple of telling that
 </p>
+<p>
 <pre>FruitMappingGeneric.map(apple=1, banana=2)</pre>
+</p>
 <p>
 is missing an argument.
 </p>
@@ -169,6 +178,18 @@ patches its type annotation for each subclass of <code>MappingEnum</code>, so
 it ends looking like the one in <code>FruitMapping</code>.
 </p>
 <p>
+<h2>Writing a mypy plugin</h2>
+</p>
+<p>
+Unfortunately the mypy plugin api is quite experimental and fluid at the
+moment, so if you want to learn how to write one, my recommendation is
+reading the <a
+href="https://github.com/python/mypy/blob/a9bc366ae501ccced78a2746b6eac07b93d7b15e/mypy/plugin.py">source
+code</a> and <a
+href="https://github.com/python/mypy/tree/a9bc366ae501ccced78a2746b6eac07b93d7b15e/mypy/plugins">examples</a>
+</p>
+<p>
+<a href="https://mypy.readthedocs.io/en/stable/extending_mypy.html">documentation</a>
 So I went on to learn how to write a mypy plugin. Unfortunaly that is not
 what I would call accessible. The plugin system is very imature and poorly
 documented. So I think
@@ -201,14 +222,14 @@ class FruitWithMetaMapping(enum.Enum, metaclass=MappingEnumMeta):
 
 print(FruitWithMetaMapping.map(apple=1, banana=2, durian=3))</pre>
 <pre># stdout
-{&lt;FruitWithMetaMapping.apple: 1&gt;: 1,
+{&lt;FruitWithMetaMapping.durian: 3&gt;: 3,
  &lt;FruitWithMetaMapping.banana: 2&gt;: 2,
- &lt;FruitWithMetaMapping.durian: 3&gt;: 3}
+ &lt;FruitWithMetaMapping.apple: 1&gt;: 1}
 </pre>
 <p>
 That works the same, which is good. And just like before
 </p>
-<pre>FruitWithMetaMapping.map(apple=1, banana=2)</pre>
+<pre>#<pre>FruitWithMetaMapping.map(apple=1, banana=2)</pre></pre>
 <p>
 raises an exception. Creating an enum is a bit clunkier, having to both
 subclass <code>enum.Enum</code> and setting the metaclass to
@@ -320,7 +341,9 @@ plugins = mapping_enum.py</pre>
 <p>
 And with that you should see helpful
 </p>
+<p>
 <pre>FruitWithMetaMapping.map(apple=1, banana=2)</pre>
+</p>
 <p>
 This gives an error <code>Missing named argument "durian" for "map" of "FruitWithMetaMapping"</code>
 </p>
@@ -333,4 +356,4 @@ This gives an error <code>Missing named argument "durian" for "map" of "FruitWit
     </body>
 </html>
 
-<!--1708a5ec1e2ec27359dce222f6679d23-->
+<!--b1ac293be63b13815e7b5499e46b8cc0-->
