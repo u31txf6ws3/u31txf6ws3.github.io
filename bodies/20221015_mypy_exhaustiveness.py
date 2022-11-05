@@ -156,20 +156,24 @@ print(FruitMappingGeneric.map(apple=1, banana=2, durian=3))
 # code</a> and <a
 # href="https://github.com/python/mypy/tree/a9bc366ae501ccced78a2746b6eac07b93d7b15e/mypy/plugins">examples</a>.
 
-# The
-# <a href="https://mypy.readthedocs.io/en/stable/extending_mypy.html">documentation</a> is incomplete
-# So I went on to learn how to write a mypy plugin. Unfortunaly that is not
-# what I would call accessible. The plugin system is very imature and poorly
-# documented. So I think
+# The <a
+# href="https://mypy.readthedocs.io/en/stable/extending_mypy.html">documentation</a>,
+# as incomplete as it is, allows one to get the gist of how the whole thing
+# works. Basically mypy offers hooks to several points of the type checking
+# process so the plugin writter can patch type annotations. The hooks take a
+# single argument which is the fully qualified named of the object to be
+# patched (e.g. <code>"package.module.className"</code>), and the hook must
+# return a callback, whose argument exposes an API to do the patching.
 
-# So it started my first foray into writing mypy plugins. Unfortunaly the API
-# for that is very imature and thinly documented. The best way to get the gist
-# of it is to look at examples and the read the source code.
-
-# There are two plugin hooks that give me acces to the class definition, so I can patch it:
-
-# I decided to go with a metaclass because it's a bit more straightforward. All I have to do
-# is move the definition of <code>map</code> to a metaclas
+# It sounds way more complicated than it actually is, but before I got to
+# writting the plugin, I had figure out what hook is relevant for my use case.
+# Again I resorted to readin the source code, and browsing though the callback
+# signatures. The only ones that supplied a <code>ClassDefContext</code> was
+# <code>get_metaclass_hook</code> and <code>get_class_decorator_hook</code>.
+# Which means I had to rewrite <code>MappingEnum</code> to be either a
+# metaclass or a class decorator. I decided to go with a metaclass because it's
+# a bit more straightforward. All I have to do is move the definition of
+# <code>map</code> to a metaclass like so
 
 from typing import cast, Iterable
 E = TypeVar("E")
@@ -189,20 +193,13 @@ print(FruitWithMetaMapping.map(apple=1, banana=2, durian=3))
 
 # That works the same, which is good. And just like before
 
-#<pre>FruitWithMetaMapping.map(apple=1, banana=2)</pre>
+# <pre>FruitWithMetaMapping.map(apple=1, banana=2)</pre>
 
-# raises an exception. Creating an enum is a bit clunkier, having to both
+# raises an exception. Creating an enum is now a bit clunkier, having to both
 # subclass <code>enum.Enum</code> and setting the metaclass to
 # <code>MappingEnumMeta</code>, but I think that's an acceptable burden.
 
-# Now to the fun part, writing the mypy plugin. I quote straight from
-# <code>mypy.plugin</code>'s docstring <blockquote> At several steps during
-# semantic analysis and type checking mypy calls special `get_xxx` methods on
-# user plugins with a single string argument that is a fully qualified name
-# (full name) of a relevant definition </blockquote> you can check the full
-# list of special methods in the documentation, but the one that I need is
-# <code>get_metaclass_hook</code>. Here's what the main body of the plugin
-# looks like
+# Now to the plugin itself. The skelleton is quite simple
 
 from typing import Callable, Optional, Type
 from mypy.plugin import ClassDefContext, Plugin
@@ -233,8 +230,8 @@ def plugin(version: str) -> Type[Plugin]:
 # meant to add the signature of the following function to
 # <code>FruitWithMetaMapping</code>
 
-@classmethod
-def map(cls: Type[E], *, apple: T, banana: T, durian: T) -> dict[E, T]: ...
+# <pre>@classmethod
+# def map(cls: Type[E], *, apple: T, banana: T, durian: T) -> dict[E, T]: ...</pre>
 
 # Here is how I go about doing it. Worth mentioning that this uses the latest
 # unreleased version (0.990+dev.5e1e26eba)
