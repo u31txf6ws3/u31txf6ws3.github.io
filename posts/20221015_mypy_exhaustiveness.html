@@ -158,8 +158,8 @@ class FruitMappingGeneric(MappingEnum):
 
 print(FruitMappingGeneric.map(apple=1, banana=2, durian=3))</pre>
 <pre># stdout
-{&lt;FruitMappingGeneric.durian: 3&gt;: 3,
- &lt;FruitMappingGeneric.banana: 2&gt;: 2,
+{&lt;FruitMappingGeneric.banana: 2&gt;: 2,
+ &lt;FruitMappingGeneric.durian: 3&gt;: 3,
  &lt;FruitMappingGeneric.apple: 1&gt;: 1}
 </pre>
 <p>
@@ -236,9 +236,12 @@ That works the same, which is good. And just like before
 <pre>FruitWithMetaMapping.map(apple=1, banana=2)</pre>
 </p>
 <p>
-raises an exception. Creating an enum is a bit clunkier, having to both
+raises an exception. Creating an enum is now a bit clunkier, having to both
 subclass <code>enum.Enum</code> and setting the metaclass to
 <code>MappingEnumMeta</code>, but I think that's an acceptable burden.
+</p>
+<p>
+Now to the plugin itself. The skelleton is quite simple
 </p>
 <pre>from typing import Callable, Optional, Type
 from mypy.plugin import ClassDefContext, Plugin
@@ -353,4 +356,4 @@ This gives an error <code>Missing named argument "durian" for "map" of "FruitWit
     </body>
 </html>
 
-<!--53a4b7e4caa7127d17454bffa8f187b0-->
+<!--2c784c8730186544efdf7ed9b1a33ccf-->

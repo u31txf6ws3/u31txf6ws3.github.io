@@ -33,7 +33,7 @@ class FruitMore(enum.Enum):
     durian = enum.auto()
 
 # the function <code>smell</code> would raise a <code>ValueError</code> if
-# <code>FruitMore.durian</code> were passed to it, even if the type annotatios
+# <code>FruitMore.durian</code> were passed to it, even if the type annotations
 # were patched to take a <code>FruitMore</code> instead of <code>Fruit</code>.
 # That's the expected behaviour, but in a large codebase it's easy to lose
 # track of all the places where I'd need to handle the new member. It is more
