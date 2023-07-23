@@ -1,0 +1,10 @@
+[tools.ruff]
+line-length = 100
+select = ['F', 'E', 'W', 'I001']
+
+[tools.black]
+line-length = 100
+
+[tools.mypy]
+strict = true
+#plugins = a.py

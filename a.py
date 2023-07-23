@@ -5,6 +5,7 @@ from mypy.typevars import fill_typevars
 from mypy.plugins.common import add_method_to_class
 from typing import Callable, Optional, Type
 
+
 def add_enum_map_signature(ctx: ClassDefContext) -> None:
     print([x.node for x in ctx.cls.info.names.values()])
     enum_members = [
@@ -43,10 +44,11 @@ def add_enum_map_signature(ctx: ClassDefContext) -> None:
 
 from mypy.plugin import Plugin
 
+
 class EnumMapPlugin(Plugin):
     def get_metaclass_hook(
-            self,
-            fullname: str,
+        self,
+        fullname: str,
     ) -> Optional[Callable[[ClassDefContext], None]]:
         if fullname.endswith(".MappingEnumMeta"):
             return add_enum_map_signature

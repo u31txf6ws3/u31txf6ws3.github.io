@@ -1,0 +1,11 @@
+(specifications->manifest '("python"
+                            "python-ipython"
+                            "python-numpy"
+                            "python-pandas"
+                            "python-pynvim"
+                            "python-rich"
+                            "python-black"
+                            "python-mypy"
+                            "python-matplotlib"
+                            "python-scikit-learn"
+                            "python-scipy"))

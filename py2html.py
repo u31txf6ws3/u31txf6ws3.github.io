@@ -2,7 +2,18 @@
 import json
 import sys
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Tuple, Iterator, TypeVar, List, Dict, Union, TextIO, Optional
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Tuple,
+    Iterator,
+    TypeVar,
+    List,
+    Dict,
+    Union,
+    Optional,
+)
 from contextlib import redirect_stdout
 import io
 import itertools as itt
@@ -11,7 +22,9 @@ import html
 T = TypeVar("T")
 
 
-def take_until(pred: Callable[[T], bool], it: Iterable[T]) -> Tuple[List[T], Iterator[T]]:
+def take_until(
+    pred: Callable[[T], bool], it: Iterable[T]
+) -> Tuple[List[T], Iterator[T]]:
     it = iter(it)
     out: List[T] = []
     empty = True
@@ -31,9 +44,7 @@ class Comment:
 
     @classmethod
     def from_lines(cls, lines: Iterable[str]) -> "Comment":
-        return cls(
-            "".join(s.replace("# ", "", 1) for s in lines).strip()
-        )
+        return cls("".join(s.replace("# ", "", 1) for s in lines).strip())
 
     def render(self, _: Any) -> str:
         if not self.text:
@@ -75,8 +86,8 @@ class Code:
         code = html.escape(self.code)
         output = html.escape(self.exec(globals_) if self.executable else "")
         if not output:
-            return f"<pre>{self.code}</pre>"
-        return f"<pre>{self.code}</pre>\n<pre># stdout\n{output}\n</pre>"
+            return f"<pre>{code}</pre>"
+        return f"<pre>{code}</pre>\n<pre># stdout\n{output}\n</pre>"
 
 
 @dataclass(frozen=True)
@@ -92,7 +103,9 @@ class Post:
         sections: List[Union["Comment", "Code"]] = []
         while True:
             try:
-                comment_block, lines = take_until(lambda l: not l.startswith("# "), lines)
+                comment_block, lines = take_until(
+                    lambda l: not l.startswith("# "), lines
+                )
             except StopIteration:
                 break
             comment = Comment.from_lines(comment_block)

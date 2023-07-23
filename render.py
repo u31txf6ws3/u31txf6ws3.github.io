@@ -1,5 +1,4 @@
 from contextlib import redirect_stdout
-from hashlib import md5
 from textwrap import dedent
 import py2html
 import io
@@ -31,7 +30,6 @@ def render_template(path, data=None):
 
     code_blocks = re.findall(r"{{.+?}}", template, re.S)
     rendered = (
-        check_output(block.lstrip('{').rstrip('}'), data)
-        for block in code_blocks
+        check_output(block.lstrip("{").rstrip("}"), data) for block in code_blocks
     )
     return replace_many(template, code_blocks, rendered)
