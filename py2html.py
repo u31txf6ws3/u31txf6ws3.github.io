@@ -1,132 +1,136 @@
-#!/usr/bin/env python3
+import html
+import io
 import json
 import sys
-from dataclasses import dataclass
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    Tuple,
-    Iterator,
-    TypeVar,
-    List,
-    Dict,
-    Union,
-    Optional,
-)
 from contextlib import redirect_stdout
-import io
-import itertools as itt
-import html
-
-T = TypeVar("T")
+from dataclasses import dataclass
 
 
-def take_until(
-    pred: Callable[[T], bool], it: Iterable[T]
-) -> Tuple[List[T], Iterator[T]]:
-    it = iter(it)
-    out: List[T] = []
-    empty = True
-    for x in it:
-        empty = False
-        if pred(x):
-            return out, itt.chain([x], it)
-        out.append(x)
-    if empty:
-        raise StopIteration()
-    return out, it
+class NotValid(Exception):
+    pass
 
 
 @dataclass(frozen=True)
 class Comment:
-    text: str
+    content: str
 
-    @classmethod
-    def from_lines(cls, lines: Iterable[str]) -> "Comment":
-        return cls("".join(s.replace("# ", "", 1) for s in lines).strip())
+    def __add__(self, other):
+        if isinstance(other, Comment):
+            return Comment(self.content + other.content)
+        raise NotValid()
 
-    def render(self, _: Any) -> str:
-        if not self.text:
+    def render(self):
+        if not self.content:
             return ""
-        return f"<p>\n{self.text}\n</p>"
+        return f"<p>\n{self.content}\n</p>"
 
 
 @dataclass(frozen=True)
 class Code:
-    code: str
-    executable: bool = True
+    content: str
 
-    @classmethod
-    def from_lines(cls, lines: Iterable[str]) -> "Code":
-        lines = iter(lines)
-        head = next((l for l in lines if l.strip()), None)
-        if not head:
-            return cls("")
-        if head.startswith("#$"):
-            executable = False
-        else:
-            lines = itt.chain([head], lines)
-            executable = True
-        return cls("".join(lines).strip(), executable)
+    def __add__(self, other):
+        if isinstance(other, Code):
+            return Code(self.content + other.content)
+        if isinstance(other, Newline):
+            return Code(self.content + "\n")
+        raise NotValid()
 
-    def exec(self, globals_: Optional[Dict[str, Any]] = None) -> str:
+    def exec(self, globals_):
         stdout = io.StringIO()
         with redirect_stdout(stdout):
             try:
-                exec(self.code, globals_)
+                exec(self.content, globals_)
             except:
-                print(self.code, file=sys.stderr)
+                print(self.content, file=sys.stderr)
                 raise
-        return stdout.getvalue().strip()
+        return Stdout(stdout.getvalue().strip())
 
-    def render(self, globals_: Optional[Dict[str, Any]] = None) -> str:
-        if not self.code:
+    def render(self):
+        if not self.content:
             return ""
-        code = html.escape(self.code)
-        output = html.escape(self.exec(globals_) if self.executable else "")
-        if not output:
-            return f"<pre>{code}</pre>"
-        return f"<pre>{code}</pre>\n<pre># stdout\n{output}\n</pre>"
+        return f"<pre>{html.escape(self.content).rstrip()}</pre>"
 
 
 @dataclass(frozen=True)
-class Post:
-    metadata: Dict[str, str]
-    sections: List[Union["Comment", "Code"]]
+class Stdout:
+    content: str
 
-    @classmethod
-    def from_file(cls, lines: Iterable[str]) -> "Post":
-        metadata_block, lines = take_until(lambda l: not l.startswith("# "), lines)
-        metadata = json.loads(Comment.from_lines(metadata_block).text)
+    def __add__(self, other):
+        raise NotValid()
 
-        sections: List[Union["Comment", "Code"]] = []
-        while True:
-            try:
-                comment_block, lines = take_until(
-                    lambda l: not l.startswith("# "), lines
-                )
-            except StopIteration:
-                break
-            comment = Comment.from_lines(comment_block)
-            if comment.text:
-                sections.append(comment)
-
-            try:
-                code_block, lines = take_until(lambda l: l.startswith("# "), lines)
-            except StopIteration:
-                break
-            code = Code.from_lines(code_block)
-            if code.code:
-                sections.append(code)
-
-        return cls(metadata, sections)
-
-    def render(self) -> str:
-        globals_: Dict[str, Any] = {}
-        return "\n".join(s.render(globals_) for s in self.sections)
+    def render(self):
+        if not self.content:
+            return ""
+        return f"<pre>#[stdout]\n{html.escape(self.content)}</pre>"
 
 
-if __name__ == "__main__":
-    with open(sys.argv[1]) as f:
-        print(Post.from_file(f).render())
+@dataclass(frozen=True)
+class NoExecFlag:
+    def __add__(self, other):
+        if isinstance(other, Code):
+            return NonExecutableCode(other.content)
+        raise NotValid()
+
+    def render(self):
+        raise ValueError()
+
+
+@dataclass(frozen=True)
+class NonExecutableCode:
+    content: str
+
+    def __add__(self, other):
+        if isinstance(other, Code):
+            return NonExecutableCode(self.content + other.content)
+        if isinstance(other, Newline):
+            return NonExecutableCode(self.content + "\n")
+        raise NotValid()
+
+    def render(self):
+        if not self.content:
+            return ""
+        return f"<pre>{html.escape(self.content)}</pre>"
+
+
+@dataclass(frozen=True)
+class Newline:
+    def __add__(self, other):
+        raise NotValid()
+
+    def render(self):
+        return ""
+
+
+def parse_line(line):
+    if not line.strip():
+        return Newline()
+    if line.startswith("# "):
+        return Comment(line[2:])
+    if line.startswith("#$"):
+        return NoExecFlag()
+    return Code(line)
+
+
+def parse_line_stream(lines):
+    elements = [parse_line(next(lines))]
+    for line in lines:
+        el = parse_line(line)
+        try:
+            elements[-1] = elements[-1] + el
+        except NotValid:
+            elements.append(el)
+    return elements
+
+
+def render_file(path):
+    out = []
+    with open(path) as f:
+        els = parse_line_stream(f)
+    metadata = els.pop(0)
+    gl = {}
+    for el in els:
+        out.append(el.render())
+        if isinstance(el, Code):
+            out.append(el.exec(gl).render())
+    return "\n".join(out), json.loads(metadata.content)

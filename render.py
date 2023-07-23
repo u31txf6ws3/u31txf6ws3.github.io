@@ -22,9 +22,7 @@ def render_template(path, data=None):
     data = data or {}
     with open(path) as fin:
         if path.endswith(".py"):
-            post = py2html.Post.from_file(fin)
-            template = post.render()
-            data.update(post.metadata)
+            template, data = py2html.render_file(path)
         else:
             template = fin.read()
 

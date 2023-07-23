@@ -20,7 +20,8 @@
 </p>
 
 
-        <p>
+        
+<p>
 A common exercise in programming is making an instance of <a
 href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Conway's game of
 life</a>. It's a great example of a simple set of rules that generate
@@ -30,20 +31,26 @@ shame because the subject of cellular automata (of which the game of life is
 but a single example) is very fascinating. This inspired me to make a series
 of posts exploring the subject and it's applications. And I decided to do it
 in python, because python is so hot right now, you guys.
+
 </p>
+
 <p>
 Simply put, a (1D) cellular automata is composed of an array of cells distributed in a circular
 pattern, where they can be found in one of two states: 0 or 1. In the
 beginning of each time step, every cell looks at its own state and the state of
 its nearest neighbors, and according to a deterministic rule decide whether to
 change its state or keep the current one.
+
 </p>
+
 <p>
 Simple right? Taking by the name "cellular automata" the uninitiated reader
 might be mislead to think that the cells are the interesting part of this
 whole thing. Wrong! The rules that the cells use to update their state is
 where the money is at. Here is what a rule looks like
+
 </p>
+
 <p>
 <img style="width:95%; height: auto;"
  src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAywAAABPCAYAAAAJBkH0AAAABmJLR0QA/wD/AP+gvaeTAAAegElE
@@ -186,7 +193,9 @@ F5DL5fpORZTq6upw/vx5ODo6ol+/fvpOR5QKCwtx/fp1+Pj4wN7eXt/piNJ///tfFBUVYfTo0fpO
 RbTS0tJgb2+PAQMG6DsVUXry5AlUKhX69esHR0dHfacjBiqJRqNx1ncWhBBCCCGEENKMmv8HZuxx
 eMjmxLwAAAAASUVORK5CYII=
 " />
+
 </p>
+
 <p>
 The input row represents all the possible neighborhoods of a cell. Depending
 on its own state and the states of its first neighbors to the left and right,
@@ -205,17 +214,20 @@ thing we gotta do is to write a function that takes the rule's name and
 generates a python list out of it. This should be quite simple to do with
 some bit shifting and whatnot. I'm feeling lazy though, so I'll just use the
 built-in <code>bin</code> function
+
 </p>
+
 <pre>print(bin(126))</pre>
-<pre># stdout
-0b1111110
-</pre>
+<pre>#[stdout]
+0b1111110</pre>
 <p>
 The problem is that it returns a string prefixed with "0b". No big deal, well
 strip the two first characters, transform each character into an integer,
 left-pad with zeros and reverse it (because the rules are organized in
 descending order, but lists are indexed in ascending order)
+
 </p>
+
 <pre>def make_rule(rule_name, k):
     rule_name = int(rule_name)
     rule_len = 2 ** k
@@ -225,30 +237,36 @@ descending order, but lists are indexed in ascending order)
     return rule
 
 print(make_rule(126, 3))</pre>
-<pre># stdout
-[0, 1, 1, 1, 1, 1, 1, 0]
-</pre>
+<pre>#[stdout]
+[0, 1, 1, 1, 1, 1, 1, 0]</pre>
 <p>
 Next we need to make a function that take a list representing the state and
 turn into an integer. It's just the reverse of what <code>make_rule</code>
 does
+
 </p>
+
 <pre>def state_id(state):
-    # Thank god for the `base` argument in python's build-in `int` =)
-    return int(''.join(map(str, state)), base=2)
+    # Thank god for the `base` argument in python&#x27;s build-in `int` =)
+    return int(&#x27;&#x27;.join(map(str, state)), base=2)
 
 assert state_id([0,1,1]) == 3
 assert state_id([1,0,1]) == 5</pre>
+
 <p>
 I know, this looks clunky, converting to and from strings just to convert an
 integer from one base to another, but it's a perfectly valid approach in my
 opinion, and not much slower than the other pure python alternatives (but
 more on that on a later post).
+
 </p>
+
 <p>
 We'll also need a simple rolling window function (and make it a generator for
 extra python points)
+
 </p>
+
 <pre>from pprint import pprint as print
 
 def rolling_window(arr, wsize):
@@ -257,40 +275,44 @@ def rolling_window(arr, wsize):
         yield arr[i:i + wsize]
 
 print(list(rolling_window([1,2,3,4,5,6], 5)))</pre>
-<pre># stdout
+<pre>#[stdout]
 [[5, 6, 1, 2, 3],
  [6, 1, 2, 3, 4],
  [1, 2, 3, 4, 5],
  [2, 3, 4, 5, 6],
  [3, 4, 5, 6, 1],
- [4, 5, 6, 1, 2]]
-</pre>
+ [4, 5, 6, 1, 2]]</pre>
 <p>
 Now applying a rule is just a matter of putting it all together
+
 </p>
+
 <pre>def apply_rule(cells, rule, k):
     assert len(rule) == 2 ** k
     return [rule[state_id(w)] for w in rolling_window(cells, k)]
 
 assert apply_rule([0,0,1,1,0,0], make_rule(126, 3), 3) == [0, 1, 1, 1, 1, 0]</pre>
+
 <p>
 And it works! But not very interesting right now, right? Before
 trying to do something fancier, let's first put together all we did in
 a nice little class
+
 </p>
+
 <pre>import matplotlib.pyplot as plt
 from random import randint
-import numpy as np  # for now we'll only use numpy to help with plotting
+import numpy as np  # for now we&#x27;ll only use numpy to help with plotting
 
 class CAutomaton:
-    def __init__(self, ncells, k, init='center'):
+    def __init__(self, ncells, k, init=&#x27;center&#x27;):
         self.ncells = ncells
         self.k = k
 
-        if init == 'center':
+        if init == &#x27;center&#x27;:
             self.cells = [0] * self.ncells
             self.cells[self.ncells // 2] = 1
-        elif init == 'random':
+        elif init == &#x27;random&#x27;:
             self.cells = [randint(0, 1) for _ in range(self.ncells)]
         else:
             self.cells = list(init)
@@ -306,7 +328,7 @@ class CAutomaton:
 
     def state_id(self, state):
         assert len(state) == self.k
-        return int(''.join(map(str, state)), base=2)
+        return int(&#x27;&#x27;.join(map(str, state)), base=2)
 
     def apply_rule(self, rule):
         assert len(rule) == 2 ** self.k
@@ -325,27 +347,35 @@ class CAutomaton:
         if ax is None:
             fig, ax = plt.subplots(figsize=(10,10))
 
-        ax.pcolormesh(states, cmap="Greys")
+        ax.pcolormesh(states, cmap=&quot;Greys&quot;)
         ax.set_xlim(0, self.ncells)
         ax.set_ylim(0, niter+1)
-        ax.set_title(r'$Rule\;%i$' % rule_id, fontsize=20)
+        ax.set_title(r&#x27;$Rule\;%i$&#x27; % rule_id, fontsize=20)
         ax.set_axis_off()
-        ax.set_aspect("equal")
+        ax.set_aspect(&quot;equal&quot;)
 
-        return ax</pre>
+        return ax
+
+</pre>
 <p>
 I made a practical <code>iterate_and_plot</code> method to repeatedly apply
 the rule to the cells and plot the history (time flowing from top to bottom).
 I also added two possible initial conditions: <code>'center'</code> (where
 all cells start at state 0 except for the middle one) and
 <code>'random'</code> (which should be pretty obvious).
+
 </p>
+
 <p>
 Let's see what happens when we apply rule 126 a bunch of times with a simple
 initial condition
+
 </p>
-<pre>CAutomaton(ncells=520, k=3, init='center').iterate_and_plot(rule_id=126, niter=255)
-plt.show()</pre>
+
+<pre>CAutomaton(ncells=520, k=3, init=&#x27;center&#x27;).iterate_and_plot(rule_id=126, niter=255)
+plt.show()
+
+</pre>
 <p>
 <img 
 src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlIAAAFDCAYAAADxveDQAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz
@@ -502,14 +532,18 @@ QCYSKQAAgEwkUgAAAJlIpAAAADKRSAEAAGQikQIAAMhEIgUAAJCJRAoAACATiRQAAEAmEikAAIBM
 JFIAAACZSKQAAAAykUgBAABkIpECAADIRCIFAACQiUQKAAAgE4kUAABAJhIpAACATCRSAAAAmf4P
 G48asXue09UAAAAASUVORK5CYII=
 " />
+
 </p>
+
 <p>
 Whoa! Look at that nice <a
 href="https://en.wikipedia.org/wiki/Sierpinski_triangle">Sierpinski
 triangle</a>! If you're not sold on cellular automata by now, there's not
 much I can do for you, buddy. As you play with different rules you'll notice
 they show a variety of different behaviors
+
 </p>
+
 <pre>fig, ax = plt.subplots(ncols=2, nrows=2, figsize=(8,5))
 
 CAutomaton(ncells=63, k=3).iterate_and_plot(rule_id=12, ax=ax[0,0])
@@ -518,7 +552,9 @@ CAutomaton(ncells=63, k=3).iterate_and_plot(rule_id=45, ax=ax[1,0])
 CAutomaton(ncells=63, k=3).iterate_and_plot(rule_id=150, ax=ax[1,1])
 
 fig.tight_layout()
-plt.show()</pre>
+plt.show()
+
+</pre>
 <p>
 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjgAAAFhCAYAAAB9HNBUAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz
 AAALEgAACxIB0t1+/AAAGIdJREFUeJzt3XvMfVlZH/DvwzDIRUAL4w3wAihYEEaNUIrMj4GKjDGp
@@ -633,21 +669,27 @@ LnLIHINzcAjb38U+Vsn7MYIDAHRHgAMAdEeAAwB0Z5t1cAAA9sIIDgDQHQEOANAdAQ4A0B0BDgDQ
 HQEOANAdAQ4A0B0BDgDQHQEOANAdAQ4A0B0BDgDQHQEOANAdAQ4A0B0BDgDQHQEOANAdAQ4A0B0B
 DgDQHQEOANAdAQ4A0B0BDgDQHQEOANCd/w+3IKkehjb4lQAAAABJRU5ErkJggg==
 " />
+
 </p>
+
 <p>
 These patterns didn't passed unnoticed to Stephen Wolfram (of
 Mathematica© fame). He created an interesting taxonomy for cellular
 automata rules
+
 </p>
+
 <pre>fig, ax = plt.subplots(ncols=4, figsize=(10, 10))
 
-CAutomaton(63, 3, 'random').iterate_and_plot(rule_id=250, niter=100, ax=ax[0])
-CAutomaton(63, 3, 'random').iterate_and_plot(rule_id=1, niter=100, ax=ax[1])
-CAutomaton(63, 3, 'random').iterate_and_plot(rule_id=30, niter=100, ax=ax[2])
-CAutomaton(63, 3, 'random').iterate_and_plot(rule_id=126, niter=100, ax=ax[3])
+CAutomaton(63, 3, &#x27;random&#x27;).iterate_and_plot(rule_id=250, niter=100, ax=ax[0])
+CAutomaton(63, 3, &#x27;random&#x27;).iterate_and_plot(rule_id=1, niter=100, ax=ax[1])
+CAutomaton(63, 3, &#x27;random&#x27;).iterate_and_plot(rule_id=30, niter=100, ax=ax[2])
+CAutomaton(63, 3, &#x27;random&#x27;).iterate_and_plot(rule_id=126, niter=100, ax=ax[3])
 
 fig.tight_layout()
-plt.show()</pre>
+plt.show()
+
+</pre>
 <p>
 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAsgAAAEYCAYAAABBfQDEAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz
 AAALEgAACxIB0t1+/AAAIABJREFUeJzt3XvsPc9d1/HX9kdpS6FY2gIKWJAGihIKqFACbS0EtcFE
@@ -857,7 +899,9 @@ DTIAAACQ4QYZAAAAyHCDDAAAAGS4QQYAAAAy3CADAAAAGW6QAQAAgAw3yAAAAECGG2QAAAAgww0y
 AAAAkOEGGQAAAMhwgwwAAABkuEEGAAAAMtwgAwAAABlukAEAAIAMN8gAAABAhhtkAAAAIPP/ARM9
 iI0N7Qb+AAAAAElFTkSuQmCC
 " />
+
 </p>
+
 <p>
 <ul>
     <li><p><strong>Class 1</strong> rules normally converge to
@@ -880,12 +924,16 @@ iI0N7Qb+AAAAAElFTkSuQmCC
         "interesting complexity".</p>
     </li>
 </ul>
+
 </p>
+
 <p>
 You can take a look at all the 256 existing rules with \(k=3\) <a
 href="http://plato.stanford.edu/entries/cellular-automata/supplement.html">here</a>,
 see if you can tell to which class each rule belongs.
+
 </p>
+
 <p>
 I totally encourage you to play with this simple code. Try seeing what
 happens when you use \(k=5\) or \(k=7\), but keep in mind that the number of
@@ -898,11 +946,14 @@ extending it to more then one dimension. <a
 href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Conway's game of
 life</a> is probably the most famous cellular automata, and it's a
 2-dimensional one.
+
 </p>
+
 <p>
 If you're interested to know more about cellular automata, <a
 href="http://plato.stanford.edu/entries/cellular-automata/">Stanford
 Encyclopedia of Philosophy</a> has an awesome article about it.
+
 </p>
 
         <p style="text-align: center; font-size: 30pt">❦</p>
