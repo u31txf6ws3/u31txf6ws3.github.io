@@ -35,33 +35,35 @@ def output_hash(path: Union[str, Path]) -> Optional[str]:
     return m.groups()[0]
 
 
-def collect_posts(post_dir: Optional[Path] = None) -> Iterator[Tuple[str, py2html.Post]]:
+Post = str
+
+
+def collect_posts(post_dir: Optional[Path] = None) -> Iterator[Tuple[str, Post, dict]]:
     post_dir = post_dir or Path(__file__).parent / "bodies"
     for post_path in post_dir.glob("*.py"):
-        with open(post_path) as f:
-             post = py2html.Post.from_file(f)
-        yield file_hash(post_path), post
+        post, metadata = py2html.render_file(post_path)
+        yield file_hash(post_path), post, metadata
 
 
-def render_post(hash: str, post: py2html.Post, force: bool = False) -> py2html.Post:
-    if hash == output_hash(post.metadata['OUTPUT']) and not force:
-        print(f"Skipping Post: {post.metadata['TITLE']}")
-        return post
+def render_post(hash: str, post: str, metadata: dict, force: bool = False) -> dict:
+    if hash == output_hash(metadata['OUTPUT']) and not force:
+        print(f"Skipping Post: {metadata['TITLE']}")
+        return metadata
 
-    output = Path(post.metadata['OUTPUT'])
-    print(f"Rendering Post: {post.metadata['TITLE']}")
-    with open(post.metadata['OUTPUT'], 'w') as fout:
-        post.metadata['PRETTY_DATE'] = format_date(post.metadata['DATE'])
-        fout.write(render("templates/post.html", {"post": post.metadata}))
+    output = Path(metadata['OUTPUT'])
+    print(f"Rendering Post: {metadata['TITLE']}")
+    with open(metadata['OUTPUT'], 'w') as fout:
+        metadata['PRETTY_DATE'] = format_date(metadata['DATE'])
+        fout.write(render("templates/post.html", {"post": metadata}))
         fout.write(f"\n<!--{hash}-->")
 
-    return post
+    return metadata
 
 
-def render_index(posts: Iterable[py2html.Post], showall=False) -> None:
+def render_index(metadata: Iterable[dict], showall=False) -> None:
     print("Rendering index")
     visible_posts = sorted(
-        [p.metadata for p in posts if not p.metadata.get("HIDDEN") or showall],
+        [m for m in metadata if not m.get("HIDDEN") or showall],
         key=lambda p: p['DATE'],
         reverse=True
     )
@@ -72,4 +74,4 @@ def render_index(posts: Iterable[py2html.Post], showall=False) -> None:
 if __name__ == "__main__":
     force = "-f" in sys.argv
     all = "-a" in sys.argv
-    render_index((render_post(h, p, force) for h, p in  collect_posts()), all)
+    render_index((render_post(h, p, m, force) for h, p, m in  collect_posts()), all)

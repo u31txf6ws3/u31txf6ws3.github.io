@@ -74,9 +74,7 @@ class CARef:
         assert len(rule) == 2 ** self.k
         self.cells = [rule[self.state_id(w)]
                       for w in rolling_window(self.cells, self.k)]
-        return self
-
-</pre>
+        return self</pre>
 <p>
 This will be our reference implementation. Let's make a simple script to
 validate future implementations comparing with <code>CARef</code>, and
@@ -125,9 +123,7 @@ def time(CAutomaton, number_of_loops):
     print(res.format(number_of_loops, total_time, avg_time))
 
 test(CARef)
-time(CARef, 10000)
-
-</pre>
+time(CARef, 10000)</pre>
 <p>
 <pre>All tests passed.
 10000 loops, total 1.25e+01 s, avg. 1.25e-03 s/loop</pre>
@@ -200,9 +196,7 @@ reason I'm using bit shifting arithmetic is because it's a lil' bit faster.
         return sid
 
 test(CAOpt1)
-time(CAOpt1, 1000)
-
-</pre>
+time(CAOpt1, 1000)</pre>
 <p>
 <pre>All tests passed.
 10000 loops, total 5.59e-01 s, avg. 5.59e-05 s/loop</pre>
@@ -323,9 +317,7 @@ class CAOpt2(CARef):
         return self
 
 test(CAOpt2)
-time(CAOpt2, 1000)
-
-</pre>
+time(CAOpt2, 1000)</pre>
 <p>
 <pre>All tests passed.
 10000 loops, total 7.57e-01 s, avg. 7.57e-05 s/loop</pre>
@@ -385,9 +377,7 @@ class CAOpt3(CARef):
         return self
 
 test(CAOpt3)
-time(CAOpt3, 1000)
-
-</pre>
+time(CAOpt3, 1000)</pre>
 <p>
 <pre>All tests passed.
 10000 loops, total 3.53e-01 s, avg. 3.53e-05 s/loop</pre>

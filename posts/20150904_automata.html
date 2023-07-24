@@ -354,9 +354,7 @@ class CAutomaton:
         ax.set_axis_off()
         ax.set_aspect(&quot;equal&quot;)
 
-        return ax
-
-</pre>
+        return ax</pre>
 <p>
 I made a practical <code>iterate_and_plot</code> method to repeatedly apply
 the rule to the cells and plot the history (time flowing from top to bottom).
@@ -373,9 +371,7 @@ initial condition
 </p>
 
 <pre>CAutomaton(ncells=520, k=3, init=&#x27;center&#x27;).iterate_and_plot(rule_id=126, niter=255)
-plt.show()
-
-</pre>
+plt.show()</pre>
 <p>
 <img 
 src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlIAAAFDCAYAAADxveDQAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz
@@ -552,9 +548,7 @@ CAutomaton(ncells=63, k=3).iterate_and_plot(rule_id=45, ax=ax[1,0])
 CAutomaton(ncells=63, k=3).iterate_and_plot(rule_id=150, ax=ax[1,1])
 
 fig.tight_layout()
-plt.show()
-
-</pre>
+plt.show()</pre>
 <p>
 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjgAAAFhCAYAAAB9HNBUAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz
 AAALEgAACxIB0t1+/AAAGIdJREFUeJzt3XvMfVlZH/DvwzDIRUAL4w3wAihYEEaNUIrMj4GKjDGp
@@ -687,9 +681,7 @@ CAutomaton(63, 3, &#x27;random&#x27;).iterate_and_plot(rule_id=30, niter=100, ax
 CAutomaton(63, 3, &#x27;random&#x27;).iterate_and_plot(rule_id=126, niter=100, ax=ax[3])
 
 fig.tight_layout()
-plt.show()
-
-</pre>
+plt.show()</pre>
 <p>
 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAsgAAAEYCAYAAABBfQDEAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz
 AAALEgAACxIB0t1+/AAAIABJREFUeJzt3XvsPc9d1/HX9kdpS6FY2gIKWJAGihIKqFACbS0EtcFE

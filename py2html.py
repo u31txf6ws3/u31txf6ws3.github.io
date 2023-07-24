@@ -90,7 +90,7 @@ class NonExecutableCode:
     def render(self):
         if not self.content:
             return ""
-        return f"<pre>{html.escape(self.content)}</pre>"
+        return f"<pre>{html.escape(self.content).rstrip()}</pre>"
 
 
 @dataclass(frozen=True)
