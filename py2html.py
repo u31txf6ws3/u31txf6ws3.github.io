@@ -4,6 +4,7 @@ import json
 import sys
 from contextlib import redirect_stdout
 from dataclasses import dataclass
+from typing import Any, NoReturn, Iterator
 
 
 class NotValid(Exception):
@@ -14,12 +15,12 @@ class NotValid(Exception):
 class Comment:
     content: str
 
-    def __add__(self, other):
+    def __add__(self, other: Any) -> "Comment":
         if isinstance(other, Comment):
             return Comment(self.content + other.content)
         raise NotValid()
 
-    def render(self):
+    def render(self) -> str:
         if not self.content:
             return ""
         return f"<p>\n{self.content}\n</p>"
@@ -29,14 +30,14 @@ class Comment:
 class Code:
     content: str
 
-    def __add__(self, other):
+    def __add__(self, other: Any) -> "Code":
         if isinstance(other, Code):
             return Code(self.content + other.content)
         if isinstance(other, Newline):
             return Code(self.content + "\n")
         raise NotValid()
 
-    def exec(self, globals_):
+    def exec(self, globals_: dict[str, Any]) -> "Stdout":
         stdout = io.StringIO()
         with redirect_stdout(stdout):
             try:
@@ -46,7 +47,7 @@ class Code:
                 raise
         return Stdout(stdout.getvalue().strip())
 
-    def render(self):
+    def render(self) -> str:
         if not self.content:
             return ""
         return f"<pre>{html.escape(self.content).rstrip()}</pre>"
@@ -56,10 +57,10 @@ class Code:
 class Stdout:
     content: str
 
-    def __add__(self, other):
+    def __add__(self, other: Any) -> "NoReturn":
         raise NotValid()
 
-    def render(self):
+    def render(self) -> str:
         if not self.content:
             return ""
         return f"<pre>#[stdout]\n{html.escape(self.content)}</pre>"
@@ -67,12 +68,12 @@ class Stdout:
 
 @dataclass(frozen=True)
 class NoExecFlag:
-    def __add__(self, other):
+    def __add__(self, other: Any) -> "NonExecutableCode":
         if isinstance(other, Code):
             return NonExecutableCode(other.content)
         raise NotValid()
 
-    def render(self):
+    def render(self) -> NoReturn:
         raise ValueError()
 
 
@@ -80,14 +81,14 @@ class NoExecFlag:
 class NonExecutableCode:
     content: str
 
-    def __add__(self, other):
+    def __add__(self, other: Any) -> "NonExecutableCode":
         if isinstance(other, Code):
             return NonExecutableCode(self.content + other.content)
         if isinstance(other, Newline):
             return NonExecutableCode(self.content + "\n")
         raise NotValid()
 
-    def render(self):
+    def render(self) -> str:
         if not self.content:
             return ""
         return f"<pre>{html.escape(self.content).rstrip()}</pre>"
@@ -95,14 +96,17 @@ class NonExecutableCode:
 
 @dataclass(frozen=True)
 class Newline:
-    def __add__(self, other):
+    def __add__(self, other: Any) -> NoReturn:
         raise NotValid()
 
-    def render(self):
+    def render(self) -> str:
         return ""
 
 
-def parse_line(line):
+Renderable = Newline | Comment | Code | NoExecFlag | NonExecutableCode
+
+
+def parse_line(line: str) -> Renderable:
     if not line.strip():
         return Newline()
     if line.startswith("# "):
@@ -112,8 +116,8 @@ def parse_line(line):
     return Code(line)
 
 
-def parse_line_stream(lines):
-    elements = [parse_line(next(lines))]
+def parse_line_stream(lines: Iterator[str]) -> list[Renderable]:
+    elements: list[Renderable] = [parse_line(next(lines))]
     for line in lines:
         el = parse_line(line)
         try:
@@ -123,12 +127,13 @@ def parse_line_stream(lines):
     return elements
 
 
-def render_file(path):
+def render_file(path: str) -> tuple[str, dict[str, Any]]:
     out = []
     with open(path) as f:
         els = parse_line_stream(f)
     metadata = els.pop(0)
-    gl = {}
+    assert isinstance(metadata, Comment), "File must start with a comment block"
+    gl: dict[str, Any] = {}
     for el in els:
         out.append(el.render())
         if isinstance(el, Code):
